@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Str;
+
 if (!function_exists("timeAgo")) {
     function timeAgo($timeStamp) {
         $timeDifference = time() - strtotime($timeStamp);
@@ -23,3 +25,11 @@ if (!function_exists("timeAgo")) {
     }
 }
 
+/*
+ * truncate string
+ */
+if (!function_exists("truncate")) {
+    function truncate($string, $limit = 18, $end = '...') {
+        return Str::limit($string, $limit, $end);
+    }
+}

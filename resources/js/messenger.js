@@ -7,12 +7,9 @@
 var temporaryMsgId = 0;
 var activeUsersIds = [];
 
-const messageForm = $(".message-form"),
-    messageInput = $(".message-input"),
-    messageBoxContainer = $(".wsus__chat_area_body"),
-    csrf_token = $("meta[name=csrf_token]").attr("content"),
-    auth_id = $("meta[name=auth_id]").attr("content"),
-    url = $("meta[name=url]").attr("content"),
+const messageForm = $(".message-form"), messageInput = $(".message-input"),
+    messageBoxContainer = $(".wsus__chat_area_body"), csrf_token = $("meta[name=csrf_token]").attr("content"),
+    auth_id = $("meta[name=auth_id]").attr("content"), url = $("meta[name=url]").attr("content"),
     messengerContactBox = $(".messenger-contacts");
 
 const getMessengerId = () => $("meta[name=id]").attr("content");
@@ -61,13 +58,9 @@ function searchUsers(query) {
 
     if (!setSearchLoading && !noMoreDataSearch) {
         $.ajax({
-            method: 'GET',
-            url: '/messenger/search',
-            data: {
-                query: query,
-                page: searchPage
-            },
-            beforeSend: function () {
+            method: 'GET', url: '/messenger/search', data: {
+                query: query, page: searchPage
+            }, beforeSend: function () {
                 setSearchLoading = true;
                 let loader = `
                     <div class="text-center search-loader">
@@ -77,8 +70,7 @@ function searchUsers(query) {
                     </div>
                 `;
                 $('.user_search_list_result').append(loader);
-            },
-            success: function (data) {
+            }, success: function (data) {
                 setSearchLoading = false;
                 $('.user_search_list_result').find('.search-loader').remove();
                 if (searchPage < 2) {
@@ -89,8 +81,7 @@ function searchUsers(query) {
 
                 noMoreDataSearch = searchPage >= data?.last_page;
                 if (!noMoreDataSearch) searchPage += 1;
-            },
-            error: function (xhr, status, error) {
+            }, error: function (xhr, status, error) {
                 setSearchLoading = false;
                 $('.user_search_list_result').find('.search-loader').remove();
             }
@@ -145,9 +136,7 @@ function IDInfo(id) {
                 $(".nothing_share").removeClass("d-none");
             }
 
-            data.favorite > 0
-                ? $(".favourite").addClass("active")
-                : $(".favourite").removeClass("active");
+            data.favorite > 0 ? $(".favourite").addClass("active") : $(".favourite").removeClass("active");
             $(".messenger-header").find("img").attr("src", data.fetch.avatar);
             $(".messenger-header").find("h4").text(data.fetch.name);
 
@@ -194,16 +183,19 @@ function sendMessage() {
                 } else {
                     messageBoxContainer.append(sendTempMessageCard(inputValue, tempID));
                 }
+                $(".no_messages").addClass("d-none");
                 scrollToBottom(messageBoxContainer);
                 messageFormReset();
             },
             success: function (data) {
+                makeSeen(true);
                 // update contact item
                 updateContactItem(getMessengerId());
 
                 const tempMsgCardElement = messageBoxContainer.find(`.message-card[data-id=${data.tempID}]`);
                 tempMsgCardElement.before(data.message);
                 tempMsgCardElement.remove();
+                initVenobox();
             },
             error: function (xhr, status, error) {
 
@@ -245,10 +237,10 @@ function receiveMessageCard(e) {
         return `
         <div class="wsus__single_chat_area message-card" data-id="${e.id}">
                     <div class="wsus__single_chat">
-                        <a class="venobox" data-gall="gallery${e.id}" href="${url+e.attachment}">
-                            <img src="${url+e.attachment}" alt="" class="img-fluid w-100">
+                        <a class="venobox" data-gall="gallery${e.id}" href="${e.attachment}">
+                            <img src="${e.attachment}" alt="" class="img-fluid w-100">
                         </a>
-                        ${e.body.length > 0 ? `<p class="messages">${message}</p>` : ''}
+                        ${e.body != null && e.body.length > 0 ? `<p class="messages">${message}</p>` : ''}
                     </div>
                 </div>
         `;
@@ -266,8 +258,10 @@ function receiveMessageCard(e) {
 // reset message area
 function messageFormReset() {
     $(".attachment-block").addClass("d-none");
+
     messageForm.trigger("reset");
-    $(".emojionearea-editor").text("");
+    let emojiElement = $("#example1").emojioneArea();
+    emojiElement.data("emojioneArea").setText("");
 }
 
 /**
@@ -287,14 +281,9 @@ function fetchMessages(id, newFetch = false) {
     }
     if (!noMoreMessages && !messagesLoading) {
         $.ajax({
-            method: "GET",
-            url: '/messenger/fetch-messages',
-            data: {
-                _token: csrf_token,
-                id: id,
-                page: messagesPage
-            },
-            beforeSend: function () {
+            method: "GET", url: '/messenger/fetch-messages', data: {
+                _token: csrf_token, id: id, page: messagesPage
+            }, beforeSend: function () {
                 let loader = `
                     <div class="text-center messages-loader">
                      <div class="spinner-border text-primary" role="status">
@@ -303,8 +292,7 @@ function fetchMessages(id, newFetch = false) {
                     </div>
                 `;
                 messageBoxContainer.prepend(loader);
-            },
-            success: function (data) {
+            }, success: function (data) {
                 messagesLoading = false;
                 // remove the loader
                 messageBoxContainer.find(".messages-loader").remove();
@@ -328,8 +316,7 @@ function fetchMessages(id, newFetch = false) {
                 if (!noMoreMessages) messagesPage++;
                 disableChatBoxLoader();
 
-            },
-            error: function (xhr, status, error) {
+            }, error: function (xhr, status, error) {
                 console.log(error);
             }
         })
@@ -349,12 +336,9 @@ let contactLoading = false;
 function getContacts() {
     if (!contactLoading && !noMoreContacts) {
         $.ajax({
-            method: "GET",
-            url: "/messenger/fetch-contacts",
-            data: {
+            method: "GET", url: "/messenger/fetch-contacts", data: {
                 page: contactsPage
-            },
-            beforeSend: function () {
+            }, beforeSend: function () {
                 contactLoading = true;
                 let loader = `
                     <div class="text-center contact-loader">
@@ -364,8 +348,7 @@ function getContacts() {
                     </div>
                 `;
                 messengerContactBox.append(loader);
-            },
-            success: function (data) {
+            }, success: function (data) {
                 contactLoading = false;
                 messengerContactBox.find(".contact-loader").remove();
                 if (contactsPage < 2) {
@@ -380,8 +363,7 @@ function getContacts() {
                 }
 
                 updateUserActiveList();
-            },
-            error: function (xhr, status, error) {
+            }, error: function (xhr, status, error) {
                 contactLoading = false;
                 messengerContactBox.find(".contact-loader").remove();
             }
@@ -398,10 +380,8 @@ function getContacts() {
 function updateContactItem(user_id) {
     if (user_id !== auth_id) {
         $.ajax({
-            method: "GET",
-            url: "/messenger/update-contact-item",
-            data: {user_id: user_id},
-            success: function (data) {
+            method: "GET", url: "/messenger/update-contact-item", data: {user_id: user_id}, success: function (data) {
+                messengerContactBox.find(".no_contact").remove();
                 messengerContactBox.find(`.messenger-list-item[data-id="${user_id}"]`).remove();
                 messengerContactBox.prepend(data.contact_item);
 
@@ -410,8 +390,7 @@ function updateContactItem(user_id) {
                 }
 
                 if (user_id === getMessengerId()) updateSelectedContent(user_id);
-            },
-            error: function (xhr, status, error) {
+            }, error: function (xhr, status, error) {
 
             }
         })
@@ -427,16 +406,11 @@ function updateContactItem(user_id) {
 function makeSeen(status) {
     $(`.messenger-list-item[data-id="${getMessengerId()}"]`).find(".unseen_count").remove();
     $.ajax({
-        method: "POST",
-        url: "/messenger/make-seen",
-        data: {
-            _token: csrf_token,
-            id: getMessengerId(),
-        },
-        success: function (data) {
+        method: "POST", url: "/messenger/make-seen", data: {
+            _token: csrf_token, id: getMessengerId(),
+        }, success: function (data) {
 
-        },
-        error: function (xhr, status, error) {
+        }, error: function (xhr, status, error) {
 
         }
     })
@@ -452,20 +426,15 @@ function star(user_id) {
     $(".favourite").toggleClass("active");
 
     $.ajax({
-        method: "POST",
-        url: "/messenger/favorite",
-        data: {
-            _token: csrf_token,
-            id: getMessengerId(),
-        },
-        success: function (data) {
+        method: "POST", url: "/messenger/favorite", data: {
+            _token: csrf_token, id: getMessengerId(),
+        }, success: function (data) {
             if (data.status == 'added') {
                 notyf.success('Added to favorites list.');
             } else {
                 notyf.success('Removed from favorites list.');
             }
-        },
-        error: function (xhr, status, error) {
+        }, error: function (xhr, status, error) {
 
         }
     })
@@ -489,19 +458,13 @@ function deleteMessage(message_id) {
     }).then((result) => {
         if (result.isConfirmed) {
             $.ajax({
-                method: "DELETE",
-                url: "/messenger/delete-message",
-                data: {
-                    _token: csrf_token,
-                    message_id: message_id,
-                },
-                beforeSend: function () {
+                method: "DELETE", url: "/messenger/delete-message", data: {
+                    _token: csrf_token, message_id: message_id,
+                }, beforeSend: function () {
                     $(`.message-card[data-id="${message_id}"]`).remove();
-                },
-                success: function (data) {
+                }, success: function (data) {
                     updateContactItem(getMessengerId());
-                },
-                error: function (xhr, status, error) {
+                }, error: function (xhr, status, error) {
 
                 }
             })
@@ -550,49 +513,44 @@ function playNotificationSound() {
 
 // listen to message channel
 window.Echo.private("message." + auth_id)
-    .listen("Message",
-        (e) => {
-            console.log(e)
+    .listen("Message", (e) => {
 
-            if (getMessengerId() !== e.from_id) {
-                updateContactItem(e.from_id);
-                // playNotificationSound(); // this portion requires additional security permission from browser so not used for the time being
-            }
+        if (getMessengerId() !== e.from_id) {
+            makeSeen(true);
+            updateContactItem(e.from_id);
+            // playNotificationSound(); // this portion requires additional security permission from browser so not used for the time being
+        }
 
-            let message = receiveMessageCard(e);
-            if (getMessengerId() == e.from_id) { // === cannot suffice to our need so we have to use == operator
-                messageBoxContainer.append(message);
-                scrollToBottom(messageBoxContainer);
-            }
-        });
+        let message = receiveMessageCard(e);
+        if (getMessengerId() == e.from_id) { // === cannot suffice to our need so we have to use == operator
+            messageBoxContainer.append(message);
+            scrollToBottom(messageBoxContainer);
+        }
+    });
 
 
 // listen to online channel
 window.Echo.join("online")
     .here((users) => {
-        console.log(users);
         // set active users
         setActiveUsersIds(users);
-        console.log(activeUsersIds);
-        $.each(users, function(index, user) {
+        $.each(users, function (index, user) {
             userActive(user.id);
         })
     })
     .joining((user) => {
         // add new user to array
         addNewUserId(user.id);
-        console.log(activeUsersIds);
         userActive(user.id);
     })
     .leaving((user) => {
         // remove user from array
         removeUserId(user.id);
-        console.log(activeUsersIds);
         userInactive(user.id);
     });
 
 function updateUserActiveList() {
-    $(".messenger-list-item").each(function(index, value) {
+    $(".messenger-list-item").each(function (index, value) {
         let id = $(this).data("id");
         if (activeUsersIds.includes(id)) {
             userActive(id);
@@ -614,8 +572,8 @@ function userInactive(id) {
 
 // set active users id to array
 function setActiveUsersIds(users) {
-    $.each(users, function(index, user) {
-       activeUsersIds.push(user.id);
+    $.each(users, function (index, user) {
+        activeUsersIds.push(user.id);
     });
 }
 
@@ -682,6 +640,7 @@ $(document).ready(function () {
         updateSelectedContent(dataId);
         setMessengerId(dataId);
         IDInfo(dataId);
+        messageFormReset();
     })
 
     // Send message
@@ -723,6 +682,27 @@ $(document).ready(function () {
         let id = $(this).data('id');
         deleteMessage(id);
     })
+
+    // custom height adjustment
+    function adjustHeight() {
+        var windowHeight = $(window).height();
+        $('.wsus__chat_area_body').css('height', (windowHeight - 120) + 'px');
+        $('.messenger-contacts').css('max-height', (windowHeight - 393) + 'px');
+        $('.wsus__chat_info_gallery').css('height', (windowHeight - 400) + 'px');
+        $('.user_search_list_result').css({
+            'height': (windowHeight - 130) + 'px',
+        });
+
+
+    }
+
+    // Call the function initially
+    adjustHeight();
+
+    // Call the function whenever the window is resized
+    $(window).resize(function () {
+        adjustHeight();
+    });
 
 
 });
