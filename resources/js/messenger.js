@@ -11,6 +11,7 @@ const messageForm = $(".message-form"),
     messageBoxContainer = $(".wsus__chat_area_body"),
     csrf_token = $("meta[name=csrf_token]").attr("content"),
     auth_id = $("meta[name=auth_id]").attr("content"),
+    url = $("meta[name=url]").attr("content"),
     messengerContactBox = $(".messenger-contacts");
 
 const getMessengerId = () => $("meta[name=id]").attr("content");
@@ -238,6 +239,29 @@ function sendTempMessageCard(message, tempID, attachment = false) {
     }
 }
 
+function receiveMessageCard(e) {
+    if (e.attachment) {
+        return `
+        <div class="wsus__single_chat_area message-card" data-id="${e.id}">
+                    <div class="wsus__single_chat">
+                        <a class="venobox" data-gall="gallery${e.id}" href="${url+e.attachment}">
+                            <img src="${url+e.attachment}" alt="" class="img-fluid w-100">
+                        </a>
+                        ${e.body.length > 0 ? `<p class="messages">${message}</p>` : ''}
+                    </div>
+                </div>
+        `;
+    } else {
+        return `
+        <div class="wsus__single_chat_area message-card" data-id="${e.id}">
+                        <div class="wsus__single_chat">
+                            <p class="messages">${e.body}</p>
+                        </div>
+                    </div>
+    `;
+    }
+}
+
 // reset message area
 function messageFormReset() {
     $(".attachment-block").addClass("d-none");
@@ -269,7 +293,7 @@ function fetchMessages(id, newFetch = false) {
                 id: id,
                 page: messagesPage
             },
-            beforeSend: function() {
+            beforeSend: function () {
                 let loader = `
                     <div class="text-center messages-loader">
                      <div class="spinner-border text-primary" role="status">
@@ -329,7 +353,7 @@ function getContacts() {
             data: {
                 page: contactsPage
             },
-            beforeSend: function() {
+            beforeSend: function () {
                 contactLoading = true;
                 let loader = `
                     <div class="text-center contact-loader">
@@ -340,7 +364,7 @@ function getContacts() {
                 `;
                 messengerContactBox.append(loader);
             },
-            success: function(data) {
+            success: function (data) {
                 contactLoading = false;
                 messengerContactBox.find(".contact-loader").remove();
                 if (contactsPage < 2) {
@@ -354,7 +378,7 @@ function getContacts() {
                     contactsPage++;
                 }
             },
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 contactLoading = false;
                 messengerContactBox.find(".contact-loader").remove();
             }
@@ -463,8 +487,8 @@ function deleteMessage(message_id) {
                     _token: csrf_token,
                     message_id: message_id,
                 },
-                beforeSend: function() {
-                  $(`.message-card[data-id="${message_id}"]`).remove();
+                beforeSend: function () {
+                    $(`.message-card[data-id="${message_id}"]`).remove();
                 },
                 success: function (data) {
                     updateContactItem(getMessengerId());
@@ -505,6 +529,33 @@ function initVenobox() {
     $(".venobox").venobox();
 }
 
+/**
+ *  ------------------------------------
+ *  Initialize venobox.js
+ *  ------------------------------------
+ */
+
+function playNotificationSound() {
+    const sound = new Audio(`/default/8-message-sound.mp3`);
+    sound.play();
+}
+
+window.Echo.private("message." + auth_id)
+    .listen("Message",
+        (e) => {
+            console.log(e)
+
+            if (getMessengerId() !== e.from_id) {
+                updateContactItem(e.from_id);
+                // playNotificationSound(); // this portion requires additional security permission from browser so not used for the time being
+            }
+
+            let message = receiveMessageCard(e);
+            if (getMessengerId() == e.from_id) {
+                messageBoxContainer.append(message);
+                scrollToBottom(messageBoxContainer);
+            }
+        })
 
 /**
  *  ------------------------------------
@@ -517,11 +568,11 @@ getContacts();
 $(document).ready(function () {
 
     if (window.innerWidth < 768) {
-        $("body").on("click", ".messenger-list-item", function() {
+        $("body").on("click", ".messenger-list-item", function () {
             $(".wsus__user_list").addClass("d-none");
         })
 
-        $("body").on("click", ".back_to_list", function() {
+        $("body").on("click", ".back_to_list", function () {
             $(".wsus__user_list").removeClass("d-none");
         })
     }
@@ -590,7 +641,7 @@ $(document).ready(function () {
     })
 
     // delete message
-    $("body").on("click", ".dlt-message", function(e) {
+    $("body").on("click", ".dlt-message", function (e) {
         e.preventDefault();
 
         let id = $(this).data('id');
