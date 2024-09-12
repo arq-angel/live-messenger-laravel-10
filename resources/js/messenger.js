@@ -5,6 +5,7 @@
  */
 
 var temporaryMsgId = 0;
+var activeUsersIds = [];
 
 const messageForm = $(".message-form"),
     messageInput = $(".message-input"),
@@ -377,6 +378,8 @@ function getContacts() {
                 if (!noMoreContacts) {
                     contactsPage++;
                 }
+
+                updateUserActiveList();
             },
             error: function (xhr, status, error) {
                 contactLoading = false;
@@ -401,6 +404,11 @@ function updateContactItem(user_id) {
             success: function (data) {
                 messengerContactBox.find(`.messenger-list-item[data-id="${user_id}"]`).remove();
                 messengerContactBox.prepend(data.contact_item);
+
+                if (activeUsersIds.includes(+user_id)) { // + javascripts converts the string to integer with + prefix
+                    userActive(user_id);
+                }
+
                 if (user_id === getMessengerId()) updateSelectedContent(user_id);
             },
             error: function (xhr, status, error) {
@@ -540,6 +548,7 @@ function playNotificationSound() {
     sound.play();
 }
 
+// listen to message channel
 window.Echo.private("message." + auth_id)
     .listen("Message",
         (e) => {
@@ -551,11 +560,78 @@ window.Echo.private("message." + auth_id)
             }
 
             let message = receiveMessageCard(e);
-            if (getMessengerId() == e.from_id) {
+            if (getMessengerId() == e.from_id) { // === cannot suffice to our need so we have to use == operator
                 messageBoxContainer.append(message);
                 scrollToBottom(messageBoxContainer);
             }
+        });
+
+
+// listen to online channel
+window.Echo.join("online")
+    .here((users) => {
+        console.log(users);
+        // set active users
+        setActiveUsersIds(users);
+        console.log(activeUsersIds);
+        $.each(users, function(index, user) {
+            userActive(user.id);
         })
+    })
+    .joining((user) => {
+        // add new user to array
+        addNewUserId(user.id);
+        console.log(activeUsersIds);
+        userActive(user.id);
+    })
+    .leaving((user) => {
+        // remove user from array
+        removeUserId(user.id);
+        console.log(activeUsersIds);
+        userInactive(user.id);
+    });
+
+function updateUserActiveList() {
+    $(".messenger-list-item").each(function(index, value) {
+        let id = $(this).data("id");
+        if (activeUsersIds.includes(id)) {
+            userActive(id);
+        }
+    });
+}
+
+function userActive(id) {
+    let contactItem = $("body").find(`.messenger-list-item[data-id="${id}"]`).find(".img").find("span");
+    contactItem.removeClass("inactive");
+    contactItem.addClass("active");
+}
+
+function userInactive(id) {
+    let contactItem = $("body").find(`.messenger-list-item[data-id="${id}"]`).find(".img").find("span");
+    contactItem.removeClass("active");
+    contactItem.addClass("inactive");
+}
+
+// set active users id to array
+function setActiveUsersIds(users) {
+    $.each(users, function(index, user) {
+       activeUsersIds.push(user.id);
+    });
+}
+
+// add new user to array
+function addNewUserId(id) {
+    activeUsersIds.push(id);
+}
+
+// remove user to array
+function removeUserId(id) {
+    let index = activeUsersIds.indexOf(id);
+
+    if (index !== -1) {
+        activeUsersIds.splice(index, 1);
+    }
+}
 
 /**
  *  ------------------------------------
