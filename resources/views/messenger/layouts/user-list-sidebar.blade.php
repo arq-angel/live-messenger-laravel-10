@@ -4,14 +4,26 @@
             <span><img src="images/chat_list_icon.png" alt="Chat" class="img-fluid"></span>
             MESSAGES
         </h3>
-        <span class="setting" data-bs-toggle="modal" data-bs-target="#exampleModal">
+        <div class="d-flex">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <a href="{{route('logout')}}" onclick="event.preventDefault(); this.closest('form').submit();" class="mr-2">
+                    <span class="setting">
+                    <i class="fas fa-sign-out-alt" style="color: red"></i>
+                    </span>
+                </a>
+            </form>
+
+            <span class="setting" data-bs-toggle="modal" data-bs-target="#exampleModal">
                     <i class="fas fa-user-cog"></i>
                 </span>
+        </div>
+
 
         @include('messenger.layouts.profile-modal')
     </div>
 
-{{--    Search Form    --}}
+    {{--    Search Form    --}}
     @include('messenger.layouts.search-form')
 
     <div class="wsus__favourite_user">
@@ -33,7 +45,7 @@
 
     <div class="wsus__save_message">
         <div class="top">your space</div>
-        <div class="wsus__save_message_center messenger-list-item"  data-id="{{ auth()->user()->id }}">
+        <div class="wsus__save_message_center messenger-list-item" data-id="{{ auth()->user()->id }}">
             <div class="icon">
                 <i class="far fa-bookmark"></i>
             </div>
